@@ -3,7 +3,7 @@ Writing the later in Japanase.
 
 ELECOM社の法人向けNAS製品 NSB-3NR/3MS シリーズ向けOpenWrt 14.07 (BB = Barrier Breaker)です．
 
-ELECOM社から開示されたソースコード一式のうちLinuxカーネルをOpenWrt 14.07ツリーでビルドできるように合わせ込んだ成果物です．
+ELECOM社から開示されたソースコード一式のうちLinuxカーネルをOpenWrt 14.07ツリーでビルドできるように合わせ込んだ成果物です．<BR>
 ビルドされるuserlandはOSSのOpenWrtそのものであり，当然ながら製品のファームウェアに搭載されている独自ソフトウェアの部分は一切含みません．
 
 製品ファームウェアのカーネルとの違いは下記の通りです．
