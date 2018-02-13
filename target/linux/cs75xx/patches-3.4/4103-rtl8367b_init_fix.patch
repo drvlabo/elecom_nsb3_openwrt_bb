@@ -1,0 +1,23 @@
+diff -Nurp a/drivers/net/phy/rtl8367b.c b/drivers/net/phy/rtl8367b.c
+--- a/drivers/net/phy/rtl8367b.c	2018-02-04 10:15:53.412023395 +0900
++++ b/drivers/net/phy/rtl8367b.c	2018-02-13 08:11:56.118673937 +0900
+@@ -912,6 +912,7 @@ static int rtl8367b_setup(struct rtl8366
+ 	struct rtl8367_platform_data *pdata;
+ 	int err;
+ 	int i;
++	u32 data;
+ 
+ 	pdata = smi->parent->platform_data;
+ 
+@@ -959,6 +960,11 @@ static int rtl8367b_setup(struct rtl8366
+ 			RTL8367B_PORT_MISC_CFG_EGRESS_MODE_ORIGINAL <<
+ 				RTL8367B_PORT_MISC_CFG_EGRESS_MODE_SHIFT);
+ 
++	/* set All-Port-Enable */
++	REG_RD(smi, 0x130F, &data);
++	data &= ~(0x01 << 5);
++	REG_WR(smi, 0x130F, data);
++
+ 	return 0;
+ }
+ 

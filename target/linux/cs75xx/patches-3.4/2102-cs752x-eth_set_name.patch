@@ -1,0 +1,13 @@
+diff -Nurp a/drivers/net/ethernet/cs752x/src/ni/cs752x_eth.c b/drivers/net/ethernet/cs752x/src/ni/cs752x_eth.c
+--- a/drivers/net/ethernet/cs752x/src/ni/cs752x_eth.c	2018-02-13 07:52:26.778837917 +0900
++++ b/drivers/net/ethernet/cs752x/src/ni/cs752x_eth.c	2018-02-13 07:57:35.523174910 +0900
+@@ -6535,6 +6535,9 @@ static int __devinit cs_ni_init_module_p
+ 					"%d .\n", i);
+ 			return -ENOMEM;
+ 		}
++
++		snprintf(dev->name, IFNAMSIZ, "eth%d", i);
++
+ 		/* 3.4.11 Change for register as platform device */
+ 		SET_NETDEV_DEV(dev, &pdev->dev);
+ 		ni_private_data.dev[i] = dev;

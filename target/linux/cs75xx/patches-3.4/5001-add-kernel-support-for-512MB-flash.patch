@@ -1,0 +1,44 @@
+From 6ae392271e8c4ac0e7be341cdbe2130d38c32fd6 Mon Sep 17 00:00:00 2001
+From: Philby John <philby@celestialsys.com>
+Date: Tue, 24 Nov 2015 01:13:44 +0530
+Subject: [PATCH] Add kernel support for 512MB flash.
+
+Also remove the 1024 (boundary alignment?) which
+inadvertantly creates a negative number when the NAND
+start physical address is added to the offset SZ_512M.
+
+Signed-off-by: Philby John <philby@celestialsys.com>
+---
+ arch/arm/mach-goldengate/cortina-g2.c | 2 +-
+ drivers/mtd/nand/cs752x_nand.c        | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/mach-goldengate/cortina-g2.c b/arch/arm/mach-goldengate/cortina-g2.c
+index afbf402..70b5fb0 100644
+--- a/arch/arm/mach-goldengate/cortina-g2.c
++++ b/arch/arm/mach-goldengate/cortina-g2.c
+@@ -438,7 +438,7 @@ struct platform_device goldengate_wdt_device = {
+ static struct resource goldengate_flash_resources[] = {
+ 	[0] = {
+ 	       .start = GOLDENGATE_FLASH_BASE,
+-	       .end = GOLDENGATE_FLASH_BASE + SZ_128M - 1,
++	       .end = GOLDENGATE_FLASH_BASE + SZ_512M - 1,
+ 	       .flags = IORESOURCE_IO,
+ 	       },
+ 	[1] = {
+diff --git a/drivers/mtd/nand/cs752x_nand.c b/drivers/mtd/nand/cs752x_nand.c
+index ebbda35..e4814dc 100644
+--- a/drivers/mtd/nand/cs752x_nand.c
++++ b/drivers/mtd/nand/cs752x_nand.c
+@@ -5240,7 +5240,7 @@ static int __devinit cs752x_nand_probe(struct platform_device *pdev)
+ 	}
+ 
+ 	/* map physical address */
+-	cs752x_host->io_base = ioremap(r->start, resource_size(r) + 1024);
++	cs752x_host->io_base = ioremap(r->start, resource_size(r));
+ 	if (!cs752x_host->io_base) {
+ 		printk("ioremap to access Cortina CS752X NAND chip failed\n");
+ 		err = -EIO;
+-- 
+1.8.1.4
+

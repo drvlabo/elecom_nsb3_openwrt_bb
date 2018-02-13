@@ -1,0 +1,390 @@
+diff -Nurp a/arch/arm/mach-goldengate/cortina-g2.c b/arch/arm/mach-goldengate/cortina-g2.c
+--- a/arch/arm/mach-goldengate/cortina-g2.c	2018-02-13 07:52:49.716640073 +0900
++++ b/arch/arm/mach-goldengate/cortina-g2.c	2018-02-13 07:57:35.875171873 +0900
+@@ -35,11 +35,6 @@
+ #include <linux/input.h>
+ #include <linux/gpio_keys.h>
+ 
+-
+-#if 0 /* Disable OpenWRT gpio_button patch */
+-#include <linux/gpio_buttons.h>
+-#endif  /* Disable OpenWRT gpio_button patch */
+-
+ #include <mach/cs_cpu.h>
+ #include <mach/cs75xx_i2c.h>
+ #include <linux/spi/spi.h>
+@@ -73,6 +68,10 @@
+ #include <asm/smp_twd.h>
+ #include <asm/system_info.h>
+ 
++#include <linux/i2c-gpio.h>
++#include <linux/rtl8367.h>
++#include <linux/phy.h>
++
+ #include "core.h"
+ /* #include "clock.h" */
+ 
+@@ -594,45 +593,47 @@ static struct platform_device cs75xx_gpi
+ 	.resource = cs75xx_gpio_resources,
+ };
+ 
++#define	POLL_MSEC	(50)
++#define	DEBOUNCE_MSEC	(150)
++
+ static struct gpio_keys_button cs75xx_gpio_keys[] = {
+-#ifdef GPIO_WPS_SW
+ 	{
+-		/* Configuration parameters */
+-		.code = KEY_WPS_BUTTON,
+-		.gpio = GPIO_WPS_SW,
+-		.active_low = 1,
+-		.desc = "GPIO_WPS_SW",
+-		.type = EV_KEY,		/* input event type (EV_KEY, EV_SW) */
+-		.wakeup = 1,		/* configure the button as a wake-up source */
+-		.debounce_interval = 0,	/* debounce ticks interval in msecs */
+-		.can_disable = 1	/* dedicated pin */
+-	},
+-#endif
+-#ifdef GPIO_WIFI_SW
+-	[1] = {
+-		/* Configuration parameters */
+-		.code = KEY_WLAN,
+-		.gpio = GPIO_WIFI_SW,
+-		.active_low = 1,
+-		.desc = "GPIO_WIFI_SW",
+-		.type = EV_KEY, 	/* input event type (EV_KEY, EV_SW) */
+-		.wakeup = 1,		/* configure the button as a wake-up source */
+-		.debounce_interval = 0,	/* debounce ticks interval in msecs */
+-		.can_disable = 1
++		.gpio		= 80,
++		.active_low	= 1,
++		.desc		= "Display",
++		.type		= EV_SW,
++		.code		= BTN_0,
++		.debounce_interval = DEBOUNCE_MSEC,
++	},
++	{
++		.gpio		= 79,
++		.active_low	= 1,
++		.desc		= "Function",
++		.type		= EV_SW,
++		.code		= BTN_1,
++		.debounce_interval = DEBOUNCE_MSEC,
++	},
++	{
++		.gpio		= 37,
++		.active_low	= 1,
++		.desc		= "Init",
++		.type		= EV_SW,
++		.code		= KEY_RESTART,
++		.debounce_interval = DEBOUNCE_MSEC,
+ 	},
+-#endif
+ };
+ 
+ static struct gpio_keys_platform_data cs75xx_gpio_keys_platform = {
+-	.buttons = cs75xx_gpio_keys,
+-	.nbuttons = ARRAY_SIZE(cs75xx_gpio_keys),
+-	.rep = 0,		/* enable input subsystem auto repeat */
+-	.enable = NULL,
+-	.disable = NULL
++	.buttons	= cs75xx_gpio_keys,
++	.nbuttons	= ARRAY_SIZE(cs75xx_gpio_keys),
++	.poll_interval	= POLL_MSEC,
++	.rep		= 0,		/* enable input subsystem auto repeat */
++	.enable		= NULL,
++	.disable	= NULL
+ };
+ 
+ static struct platform_device cs75xx_gpio_keys_device = {
+-	.name = "gpio-keys",
++	.name = "gpio-keys-polled",
+ 	.id = -1,
+ 	.dev = {
+ 		.power.can_wakeup = 1,
+@@ -642,80 +643,25 @@ static struct platform_device cs75xx_gpi
+ 	},
+ };
+ 
+-#if 0 /* Disable OpenWRT gpio_button patch */
+-static struct gpio_button cs75xx_gpio_btns[] = {
+-#ifdef GPIO_FACTORY_DEFAULT
+-	{
+-		.gpio = GPIO_FACTORY_DEFAULT,
+-		.active_low = 1,
+-		.desc = "GPIO_FACTORY_DEFAULT",
+-		.type = EV_KEY,
+-		.code = KEY_VENDOR,
+-		.threshold = FACTORY_DEFAULT_TIME,
+-	},
+-#endif
+-};
+-
+-static struct gpio_buttons_platform_data cs75xx_gpio_btns_platform = {
+-	.buttons = cs75xx_gpio_btns,
+-	.nbuttons = ARRAY_SIZE(cs75xx_gpio_btns),
+-#ifdef GPIO_BTNS_POLLING_INTERVAL
+-	.poll_interval = GPIO_BTNS_POLLING_INTERVAL,
+-#endif
+-};
+-
+-static struct platform_device cs75xx_gpio_btns_device = {
+-	.name = "gpio-buttons",
+-	.id = -1,
+-	.dev = {
+-		.dma_mask = &cs75xx_dmamask,
+-		.coherent_dma_mask = 0xffffffff,
+-		.platform_data = &cs75xx_gpio_btns_platform
+-		},
+-};
+-#endif /* Disable OpenWRT gpio_button patch */
+-
+ static struct gpio_led cs75xx_leds[] = {
+-#ifdef GPIO_VOIP_LED
+-	{
+-		.name = "voip:green",
+-		.gpio = GPIO_VOIP_LED,
+-		.active_low = 0,
+-		.default_state = LEDS_GPIO_DEFSTATE_OFF,
+-	},
+-#endif
+-#ifdef GPIO_SYS_RDY_LED
+-	{
+-		.name = "sys",
+-		.gpio = GPIO_SYS_RDY_LED,
+-		.active_low = 0,
+-		.default_state = LEDS_GPIO_DEFSTATE_OFF,
+-	},
+-#endif
+-#ifdef GPIO_USB_LED
+ 	{
+-		.name = "usb",
+-		.gpio = GPIO_USB_LED,
+-		.active_low = 0,
+-		.default_state = LEDS_GPIO_DEFSTATE_OFF,
++		.name		= "info",
++		.gpio		= 84,
++		.active_low	= 0,
++		.default_state	= LEDS_GPIO_DEFSTATE_KEEP,
++	},
++	{
++		.name		= "error",
++		.gpio		= 54,
++		.active_low	= 0,
++		.default_state	= LEDS_GPIO_DEFSTATE_KEEP,
++	},
++	{
++		.name		= "hdd",
++		.gpio		= 53,
++		.active_low	= 0,
++		.default_state	= LEDS_GPIO_DEFSTATE_KEEP,
+ 	},
+-#endif
+-#ifdef GPIO_USB_LED0
+-	{
+-		.name = "usb0",
+-		.gpio = GPIO_USB_LED0,
+-		.active_low = 0,
+-		.default_state = LEDS_GPIO_DEFSTATE_OFF,
+-	},
+-#endif
+-#ifdef GPIO_USB_LED1
+-	{
+-		.name = "usb1",
+-		.gpio = GPIO_USB_LED1,
+-		.active_low = 0,
+-		.default_state = LEDS_GPIO_DEFSTATE_OFF,
+-	},
+-#endif
+ };
+ 
+ static struct gpio_led_platform_data cs75xx_led_platform_data = {
+@@ -731,6 +677,9 @@ static struct platform_device cs75xx_led
+ 	},
+ };
+ 
++#define	CSW_USE_I2C_GPIO
++
++#ifndef CSW_USE_I2C_GPIO
+ static struct cs75xx_i2c_pdata cs75xx_i2c_cfg = {
+ 	APB_CLOCK,
+ 	100000,
+@@ -764,8 +713,51 @@ static struct platform_device cs75xx_i2c
+ 	.num_resources = ARRAY_SIZE(cs75xx_i2c_resources),
+ 	.resource = cs75xx_i2c_resources,
+ };
++#else
++/*
++ * I2C SCL --> GPIO #41 (non-OpenDrain)
++ * I2C SDA --> GPIO #40 (non-OpenDrain)
++ */
++static struct i2c_gpio_platform_data i2c_gpio_pdata0 = {
++	.sda_pin		= 40,
++	.sda_is_open_drain	= 0,
++	.scl_pin		= 41,
++	.scl_is_open_drain	= 0,
++	.udelay			= 2,
++};
++static struct platform_device i2c_gpio_device0 = {
++	.name			= "i2c-gpio",
++	.id			= 0,
++	.dev.platform_data	= &i2c_gpio_pdata0,
++};
++#endif
++
++
++/*
++ * connected to OLED
++ */
++static struct i2c_gpio_platform_data i2c_gpio_pdata1 = {
++	.sda_pin		= 67,
++	.sda_is_open_drain	= 0,
++	.scl_pin		= 66,
++	.scl_is_open_drain	= 0,
++	.udelay			= 2,
++};
++static struct platform_device i2c_gpio_device1 = {
++	.name			= "i2c-gpio",
++	.id			= 1,
++	.dev.platform_data	= &i2c_gpio_pdata1,
++};
++
+ 
+ static struct i2c_board_info i2c_board_infos[] __initdata = {
++	{
++	I2C_BOARD_INFO("amc6821", 0x4d),
++	.flags = 0,
++	.irq = 0,
++	.platform_data = NULL,
++	},
++#if 0
+ #if defined(CONFIG_CORTINA_FPGA)
+ 	{
+ 	 I2C_BOARD_INFO("cs4341", 0x10),
+@@ -832,6 +824,7 @@ static struct i2c_board_info i2c_board_i
+ 		.platform_data = NULL,
+ 	},
+ #endif
++#endif
+ };
+ 
+ static struct cs75xx_spi_info cs75xx_spi_cfg = {
+@@ -1591,6 +1584,63 @@ struct platform_device cs75xx_device_uar
+ 	.resource       = cs75xx_uart3_resources,
+ };
+ 
++static struct rtl8367_extif_config	l2sw_extif_cfg = {
++	.txdelay	= 1,
++	.rxdelay	= 7,
++	.mode		= RTL8367_EXTIF_MODE_RGMII,
++	.ability	= {
++		.force_mode	= 1,
++		.nway		= 0,
++		.txpause	= 0,
++		.rxpause	= 0,
++		.link		= 1,
++		.duplex		= 1,
++		.speed		= RTL8367_PORT_SPEED_1000,
++	},
++};
++
++static struct rtl8367_platform_data l2sw_pdev_data = {
++	.mii_bus_name_id	= "cs75xx_mdiobus0",
++	.extif0_cfg		= NULL,
++	.extif1_cfg		= &l2sw_extif_cfg,	/* Port6 */
++	.led_cfg0		= RTL8367_LED_MODE_SPD1000,
++	.led_cfg1		= RTL8367_LED_MODE_LINK_ACT,
++	.led_cfg2		= RTL8367_LED_MODE_OFF,
++};
++
++static struct platform_device l2sw_device = {
++	.name		= RTL8367B_DRIVER_NAME,
++	.id		= -1,
++	.dev	= {
++		.platform_data = &l2sw_pdev_data,
++	},
++};
++
++static int rtl8211_phy_fixup(struct phy_device *phydev)
++{
++	int	val;
++
++	phy_write(phydev, 0x1F, 0x0000);
++
++	phy_write(phydev, 0x10, 0x017E);
++
++	phy_write(phydev, 0x1F, 0x0000);
++
++	phy_write(phydev, 0x1F, 0x0007);	/* ExtPage */
++	phy_write(phydev, 0x1E, 0x00A0);	/* ExtPage 0xA0 */
++
++	val = phy_read(phydev, 0x1A);
++	val &= ~(0x01 << 2);
++	phy_write(phydev, 0x1A, val);
++
++	phy_write(phydev, 0x1F, 0x0000);
++
++	printk("fix-up for RTL8211 PHY: done\n");
++
++	return 0;
++}
++
++
+ static struct platform_device *platform_devices[] __initdata = {
+ 	&cs75xx_device_uart0,
+ 	&cs75xx_device_uart1,
+@@ -1604,11 +1654,15 @@ static struct platform_device *platform_
+ #endif				/* CS752X_SD */
+ 	&cs75xx_gpio_device,	/* CS75XX GPIO */
+ 	&cs75xx_gpio_keys_device,
+-#if 0 /* Disable OpenWRT gpio button patch */
+-	&cs75xx_gpio_btns_device,
+-#endif /* Disable OpenWRT gpio button patch */
+ 	&cs75xx_led_device,
++#ifdef CSW_USE_I2C_GPIO
++	&i2c_gpio_device0,
++#else
+ 	&cs75xx_i2c_device,	/* CS75XX I2C */
++#endif
++#if 1
++	&i2c_gpio_device1,
++#endif
+ 	&cs75xx_spi_device,	/* CS75XX SPI */
+ 	&goldengate_flash_device,	/* G2 NAND */
+ 	&cs75xx_ir_device,	/* CS75XX IR */
+@@ -1638,6 +1692,7 @@ static struct platform_device *platform_
+ #ifdef CONFIG_PHONE_CS75XX_WRAPPER
+ 	&cs75xx_phone_device,
+ #endif
++	&l2sw_device,
+ };
+ 
+ void goldengate_acp_update(void)
+@@ -2155,9 +2210,11 @@ static void __init goldengate_init(void)
+ 
+ 	get_platform_clk(&clk);
+ 
++#ifndef CSW_USE_I2C_GPIO
+ #ifdef CONFIG_I2C_CS75XX
+ 	cs75xx_i2c_cfg.freq_rcl = clk.apb_clk;
+ #endif
++#endif
+ #ifdef CONFIG_SPI_CS75XX
+ 	cs75xx_spi_cfg.tclk = clk.apb_clk;
+ #endif
+@@ -2168,13 +2225,14 @@ static void __init goldengate_init(void)
+ 	//Ryan Add for LCD
+ 	cs75xx_add_device_lcd();
+ 
+-#if defined(CONFIG_I2C_CS75XX) && defined(CONFIG_I2C_BOARDINFO)
++#if (defined(CONFIG_I2C_CS75XX) || defined(CONFIG_I2C_GPIO)) && defined(CONFIG_I2C_BOARDINFO)
+ 	i2c_register_board_info(0, i2c_board_infos, ARRAY_SIZE(i2c_board_infos));
+ #endif
+ #ifdef CONFIG_SPI_CS75XX
+ 	spi_register_board_info(spi_board_infos, ARRAY_SIZE(spi_board_infos));
+ #endif
+ 
++	phy_register_fixup_for_uid( 0x001CC915, 0xFFFFFFFF, rtl8211_phy_fixup);
+ }
+ 
+ #define CONFIG_CS752X_NR_QMBANK 1

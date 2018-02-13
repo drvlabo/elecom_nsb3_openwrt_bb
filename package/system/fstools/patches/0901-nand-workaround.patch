@@ -1,0 +1,15 @@
+diff -Nurp a/libfstools/mtd.c b/libfstools/mtd.c
+--- a/libfstools/mtd.c	2018-02-01 10:15:50.000000000 +0900
++++ b/libfstools/mtd.c	2018-02-12 19:06:01.460502441 +0900
+@@ -219,6 +219,11 @@ static int mtd_volume_identify(struct vo
+ 		return FS_JFFS2;
+ 	}
+ 
++	if (v->type == NANDFLASH && deadc0de == 0xffffffff) {
++		fprintf(stderr, "jffs2 is ready\n");
++		return FS_JFFS2;
++	}
++
+ 	fprintf(stderr, "No jffs2 marker was found\n");
+ 
+ 	return FS_NONE;

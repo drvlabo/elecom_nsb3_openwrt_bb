@@ -1,0 +1,53 @@
+diff -Nurp a/drivers/net/phy/mdio_bus.c b/drivers/net/phy/mdio_bus.c
+--- a/drivers/net/phy/mdio_bus.c	2014-04-04 03:59:21.000000000 +0900
++++ b/drivers/net/phy/mdio_bus.c	2018-02-13 07:57:35.524174901 +0900
+@@ -88,6 +88,37 @@ static struct class mdio_bus_class = {
+ 	.dev_release	= mdiobus_release,
+ };
+ 
++static int mdio_name_match( struct device *dev, const void *mdio_name )
++{
++	struct mii_bus *mii = to_mii_bus(dev);
++	int len;
++	int res = 0;
++
++	len = strlen(mii->name);
++	if (len <= 0)
++		return 0;
++
++	if ((strncmp(mdio_name, mii->name, len) == 0) &&
++			(strcmp(&(mdio_name[len]), mii->id) == 0))
++		res = 1;
++
++	return res;
++}
++
++struct mii_bus *mdio_find_bus_by_name( char *name )
++{
++	struct device *d;
++
++	if (!name)
++		return NULL;
++
++	d = class_find_device( &mdio_bus_class, NULL, name,
++				mdio_name_match );
++
++	return d ? to_mii_bus(d) : NULL;
++}
++EXPORT_SYMBOL(mdio_find_bus_by_name);
++
+ /**
+  * mdiobus_register - bring up all the PHYs on a given bus and attach them to bus
+  * @bus: target mii_bus
+diff -Nurp a/include/linux/phy.h b/include/linux/phy.h
+--- a/include/linux/phy.h	2014-04-04 03:59:21.000000000 +0900
++++ b/include/linux/phy.h	2018-02-13 07:57:34.101187174 +0900
+@@ -144,6 +144,8 @@ struct phy_device *mdiobus_scan(struct m
+ int mdiobus_read(struct mii_bus *bus, int addr, u32 regnum);
+ int mdiobus_write(struct mii_bus *bus, int addr, u32 regnum, u16 val);
+ 
++struct mii_bus *mdio_find_bus_by_name(char *name);
++
+ 
+ #define PHY_INTERRUPT_DISABLED	0x0
+ #define PHY_INTERRUPT_ENABLED	0x80000000

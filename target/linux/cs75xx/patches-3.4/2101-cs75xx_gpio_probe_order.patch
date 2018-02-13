@@ -1,0 +1,21 @@
+diff -Nurp a/drivers/gpio/cs75xx-gpio.c b/drivers/gpio/cs75xx-gpio.c
+--- a/drivers/gpio/cs75xx-gpio.c	2018-02-13 07:52:26.682838746 +0900
++++ b/drivers/gpio/cs75xx-gpio.c	2018-02-13 07:57:33.053196213 +0900
+@@ -395,7 +395,9 @@ static int __init cs75xx_gpio_init(void)
+ 
+ 	return rc;
+ }
++postcore_initcall(cs75xx_gpio_init);
+ 
++#if 0
+ static void __exit cs75xx_gpio_exit(void)
+ {
+ 	gpio_dbgmsg("\n%s\n", __func__);
+@@ -405,6 +407,7 @@ static void __exit cs75xx_gpio_exit(void
+ 
+ module_init(cs75xx_gpio_init);
+ module_exit(cs75xx_gpio_exit);
++#endif
+ 
+ MODULE_LICENSE("GPL");
+ MODULE_DESCRIPTION("Cortina CS75XX GPIO driver");

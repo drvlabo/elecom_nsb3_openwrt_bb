@@ -1,0 +1,5 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+logger "button $BUTTON, action $ACTION, $SEEN seconds"
